@@ -10,12 +10,17 @@ const boardSchema = new mongoose.Schema({
   },
 });
 
-boardSchema.pre("deleteOne", async function (next) {
-  try {
-    await Column.deleteMany({ boardId: this._conditions._id });
-  } catch (error) {
-    next(error);
-  }
-});
+boardSchema.pre(
+  "deleteOne",
+  { document: false, query: true },
+  async function (next) {
+    try {
+      const doc = await this.model.findOne(this.getFilter());
+      await Column.deleteMany({ boardId: doc._id });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 module.exports = mongoose.model("Board", boardSchema);

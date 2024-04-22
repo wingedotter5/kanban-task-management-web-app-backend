@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../../models/user");
 const Board = require("../../models/board");
 const Column = require("../../models/column");
+const Task = require("../../models/task");
+const Subtask = require("../../models/subtask");
 
 module.exports = {
   async signup(parent, args, context, info) {
@@ -81,7 +83,7 @@ module.exports = {
 
     return result.deletedCount > 0;
   },
-  async updateBoard(parent, args, context, info) {
+  async editBoard(parent, args, context, info) {
     const { currentUser } = context;
     if (!currentUser) {
       throw new Error("Unauthorized");
@@ -106,12 +108,20 @@ module.exports = {
     }
 
     if (args.modifiedColumns) {
-      const updateOperations = args.modifiedColumns.map(({ id, name }) => ({
-        updateOne: {
-          filter: { _id: id, boardId: board._id, userId: currentUser._id },
-          update: { $set: { name } },
-        },
-      }));
+      const updateOperations = args.modifiedColumns.map(
+        ({ id, ...fields }) => ({
+          updateOne: {
+            filter: { _id: id, boardId: board._id, userId: currentUser._id },
+            update: {
+              $set: Object.fromEntries(
+                Object.entries(fields).filter(
+                  ([_, value]) => value !== null || value !== undefined,
+                ),
+              ),
+            },
+          },
+        }),
+      );
 
       await Column.bulkWrite(updateOperations);
     }
@@ -127,5 +137,115 @@ module.exports = {
     }
 
     return await board.save();
+  },
+  async createTask(parent, args, context, info) {
+    const { currentUser } = context;
+    if (!currentUser) {
+      throw new Error("Unauthorized");
+    }
+
+    const column = await Column.findOne({
+      _id: args.columnId,
+      userId: currentUser._id,
+    });
+    if (!column) {
+      throw new Error("Column not found");
+    }
+
+    const task = new Task({
+      title: args.title,
+      description: args.description,
+      columnId: column._id,
+      userId: currentUser._id,
+    });
+
+    await Subtask.insertMany(
+      args.subtasks.map((title) => ({
+        title,
+        isCompleted: false,
+        taskId: task._id,
+        userId: currentUser._id,
+      })),
+    );
+
+    return task.save();
+  },
+  async deleteTask(parent, args, context, info) {
+    const { currentUser } = context;
+    if (!currentUser) {
+      throw new Error("Unauthorized");
+    }
+
+    const result = await Task.deleteOne({
+      _id: args.id,
+      userId: currentUser._id,
+    });
+
+    return result.deletedCount > 0;
+  },
+  async editTask(parent, args, context, info) {
+    const { currentUser } = context;
+    if (!currentUser) {
+      throw new Error("Unauthorized");
+    }
+
+    const task = await Task.findOne({ _id: args.id, userId: currentUser._id });
+    if (!task) {
+      throw new Error("Task not found");
+    }
+
+    const column = await Column.findOne({
+      _id: args.columnId,
+      userId: currentUser._id,
+    });
+    if (!column) {
+      throw new Error("Column not found");
+    }
+
+    if (args.columnId) task.columnId = args.columnId;
+
+    if (args.title) task.title = args.title;
+
+    if (args.description) task.description = args.description;
+
+    if (args.deletedSubtaskIds) {
+      await Subtask.deleteMany({
+        _id: { $in: args.deletedSubtaskIds },
+        taskId: task._id,
+        userId: currentUser._id,
+      });
+    }
+
+    if (args.modifiedSubtasks) {
+      const updateOperations = args.modifiedSubtasks.map(
+        ({ id, ...fields }) => ({
+          updateOne: {
+            filter: { _id: id, taskId: task._id, userId: currentUser._id },
+            update: {
+              $set: Object.fromEntries(
+                Object.entries(fields).filter(
+                  ([_, value]) => value !== null || value !== undefined,
+                ),
+              ),
+            },
+          },
+        }),
+      );
+
+      await Subtask.bulkWrite(updateOperations);
+    }
+
+    if (args.newSubtasks) {
+      await Subtask.insertMany(
+        args.newSubtasks.map((title) => ({
+          title,
+          isCompleted: false,
+          taskId: task._id,
+          userId: currentUser._id,
+        })),
+      );
+    }
+
+    return task.save();
   },
 };

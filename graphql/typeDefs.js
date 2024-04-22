@@ -12,12 +12,15 @@ module.exports = `
   type Board {
     id: ID!
     name: String!
+
     columns: [Column!]!
   }
 
   type Column {
     id: ID!
     name: String!
+
+    tasks: [Task!]!
   }
 
   input ColumnInput {
@@ -25,21 +28,42 @@ module.exports = `
     name: String!
   }
 
+  type Task {
+    id: ID!
+    title: String!
+    description: String
+    columnId: ID!
+
+    subtasks: [Subtask!]!
+  }
+
+  type Subtask {
+    id: ID!
+    title: String!
+    isCompleted: Boolean!
+  }
+
+  input SubtaskInput {
+    id: ID!
+    title: String
+    isCompleted: Boolean
+  }
+
   type Query {
-    boards: [Board!]!
-    board(id: ID!): Board
+    getBoards: [Board!]!
+    getBoard(id: ID!): Board
   }
 
   type Mutation {
     signup(
       username: String!
       password: String!
-    ): AuthPayload!
+    ): AuthPayload
 
     login(
       username: String!
       password: String!
-    ): AuthPayload!
+    ): AuthPayload
 
     createBoard(
       name: String!
@@ -48,12 +72,33 @@ module.exports = `
 
     deleteBoard(id: ID!): Boolean!
 
-    updateBoard(
+    editBoard(
       id: ID!
       name: String
       deletedColumnIds: [ID!]
       modifiedColumns: [ColumnInput!]
       newColumns: [String!]
     ): Board!
+
+    createTask(
+      title: String!
+      description: String
+      subtasks: [String!]
+      columnId: ID!
+    ): Task!
+
+    deleteTask(
+      id: ID!
+    ): Boolean!
+
+    editTask(
+      id: ID!
+      title: String
+      description: String
+      columnId: ID!
+      deletedSubtaskIds: [ID!]
+      modifiedSubtasks: [SubtaskInput!]
+      newSubtasks: [String!]
+    ): Task
   }
 `;

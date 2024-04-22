@@ -1,7 +1,7 @@
 const Board = require("../../models/board");
 
 module.exports = {
-  async boards(parent, args, context, info) {
+  async getBoards(parent, args, context, info) {
     const { currentUser } = context;
     if (!currentUser) {
       throw new Error("Unauthorized");
@@ -9,7 +9,7 @@ module.exports = {
 
     return Board.find({ userId: currentUser._id });
   },
-  async board(parent, args, context, info) {
+  async getBoard(parent, args, context, info) {
     const { currentUser } = context;
     if (!currentUser) {
       throw new Error("Unauthorized");
