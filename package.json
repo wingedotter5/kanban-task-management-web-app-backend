@@ -1,17 +1,20 @@
 {
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.0",
     "prettier": "^3.2.5"
   },
   "dependencies": {
     "@apollo/server": "^4.10.4",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
     "graphql": "^16.8.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.3.2"
   },
   "scripts": {
-    "dev": "nodemon ./index.js",
+    "start": "cross-env NODE_ENV=production node ./index.js",
+    "dev": "cross-env NODE_ENV=development nodemon ./index.js",
     "prettier": "prettier --write ."
   }
 }

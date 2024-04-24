@@ -3,6 +3,7 @@ const { ApolloServer } = require("@apollo/server");
 const { startStandaloneServer } = require("@apollo/server/standalone");
 const jwt = require("jsonwebtoken");
 
+const config = require("./config");
 const User = require("./models/user");
 const typeDefs = require("./graphql/typeDefs");
 const resolvers = require("./graphql/resolvers");
@@ -12,15 +13,13 @@ const server = new ApolloServer({
   resolvers,
 });
 
-mongoose.connect("mongodb://127.0.0.1:27017/kanban").then(() => {
-  console.log("Connected to MongoDB");
-
+mongoose.connect(config.MONGODB_URI).then(() => {
+  console.log(`Connected to MongoDB`);
   startStandaloneServer(server, {
-    listen: { port: 4000 },
-    async context({ req, res }) {
+    async context({ req }) {
       const auth = req ? req.headers.authorization : null;
       if (auth && auth.startsWith("Bearer ")) {
-        const decodedToken = jwt.verify(auth.substring(7), "SECRET");
+        const decodedToken = jwt.verify(auth.substring(7), config.JWT_SECRET);
         const currentUser = await User.findById(decodedToken.userId);
         return {
           currentUser,
@@ -28,6 +27,6 @@ mongoose.connect("mongodb://127.0.0.1:27017/kanban").then(() => {
       }
     },
   }).then(({ url }) => {
-    console.log(`Server @ ${url}`);
+    console.log(`Server: ${url}`);
   });
 });

@@ -9,6 +9,19 @@ const Subtask = require("../../models/subtask");
 
 module.exports = {
   async signup(parent, args, context, info) {
+    const userExists = await User.findOne({ username: args.username });
+    if (userExists) {
+      throw new Error("Username not available");
+    }
+
+    if (args.username.length < 3) {
+      throw new Error("Usernames must be at least 3 characters long");
+    }
+
+    if (args.password.length < 6) {
+      throw new Error("Passwords must be at leasts 6 characters long");
+    }
+
     const password = await bcrypt.hash(args.password, 10);
 
     const user = new User({
@@ -21,7 +34,7 @@ module.exports = {
       {
         userId: user._id.toString(),
       },
-      "SECRET",
+      process.env.JWT_SECRET,
     );
 
     return {
@@ -34,15 +47,18 @@ module.exports = {
       username: args.username,
     });
     if (!user) {
-      throw new Error("No such user found");
+      throw new Error(`Username not found`);
     }
 
     const valid = await bcrypt.compare(args.password, user.password);
     if (!valid) {
-      throw new Error("Invalid password");
+      throw new Error("Incorrect password");
     }
 
-    const token = jwt.sign({ userId: user._id.toString() }, "SECRET");
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      process.env.JWT_SECRET,
+    );
 
     return {
       token,

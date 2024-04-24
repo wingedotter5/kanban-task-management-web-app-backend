@@ -538,64 +538,54 @@ const boards = [
 
 async function populateDatabase() {
   const user = new User({
-    username: "anon",
-    password: await bcrypt.hash("anon", 10),
+    username: "guest",
+    password: await bcrypt.hash("guest", 10),
   });
   await user.save();
 
   for (const b of boards) {
-    console.log("creating", b.name);
+    console.log("Creating", b.name);
     const board = new Board();
 
-    const columns = await Promise.all(
-      b.columns.map(async (c) => {
-        const column = new Column();
+    for (const c of b.columns) {
+      const column = new Column();
 
-        const tasks = await Promise.all(
-          c.tasks.map(async (t) => {
-            const task = new Task();
+      for (const t of c.tasks) {
+        const task = new Task();
 
-            const subtasks = await Promise.all(
-              t.subtasks.map(async (st) => {
-                const subtask = new Subtask();
-                subtask.title = st.title;
-                subtask.isCompleted = st.isCompleted;
-                subtask.taskId = task._id;
-                subtask.userId = user._id;
-                await subtask.save();
-                return subtask;
-              }),
-            );
+        for (const st of t.subtasks) {
+          const subtask = new Subtask();
+          subtask.title = st.title;
+          subtask.isCompleted = st.isCompleted;
+          subtask.taskId = task._id;
+          subtask.userId = user._id;
+          await subtask.save();
+        }
 
-            task.title = t.title;
-            task.description = t.description;
-            task.columnId = column._id;
-            task.userId = user._id;
+        task.title = t.title;
+        task.description = t.description;
+        task.columnId = column._id;
+        task.userId = user._id;
 
-            await task.save();
-            return task;
-          }),
-        );
+        await task.save();
+      }
 
-        column.name = c.name;
-        column.boardId = board._id;
-        column.userId = user._id;
+      column.name = c.name;
+      column.boardId = board._id;
+      column.userId = user._id;
 
-        await column.save();
-        return column;
-      }),
-    );
+      await column.save();
+    }
 
     board.name = b.name;
     board.userId = user._id;
 
     await board.save();
-    console.log("created", b.name);
   }
 }
 
 mongoose.connect("mongodb://127.0.0.1:27017/kanban").then(() => {
-  console.log("connected to mongodb\npopulating db");
+  console.log("Connected to mongodb\nPopulating db");
   populateDatabase()
     .then(() => {
       console.log("Database population completed.");
